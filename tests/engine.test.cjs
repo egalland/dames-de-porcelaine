@@ -1,0 +1,12 @@
+const root=require('path').resolve(__dirname,'..');
+const fs=require('fs'),ts=require('typescript'),vm=require('vm'),assert=require('assert');const e={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(root+'/lib/game.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:e,Math,JSON,Error,Array,Set});const {initial,moves,play,upgrade,forgeCharges,forgeResult,claimReward}=e;function empty(rs=[[],[]]){let g=initial(rs);g.board=Array(64).fill(null);g.board[42]={side:1,king:false,hp:1};g.board[7]={side:2,king:false,hp:1};return g;}
+let g=empty();g.board[35]={side:2,king:false,hp:2};g=play(g,42,28);assert.equal(g.board[35].hp,1);assert.equal(g.turn,2);assert.equal(g.chain,null);
+g=empty([['leap'],[]]);assert(moves(g).some(m=>m.from===42&&m.to===24));g.board[33]={side:1,king:false};assert(!moves(g).some(m=>m.from===42&&m.to===24));
+g=empty([['rook'],[]]);assert(moves(g).some(m=>m.from===42&&m.to===40));
+g=empty([['flight'],[]]);g.board[42].king=true;g.board[35]={side:2,king:false};assert(moves(g).some(m=>m.to===21&&m.capture===35));
+g=empty([['blast'],[]]);g.board[35]={side:2,king:false};g.board[21]={side:2,king:false};g=play(g,42,28);assert(!g.board[35]);assert(!g.board[21]);assert.equal(g.last.captured.length,2);
+g=empty([['vampire'],[]]);g.board[35]={side:2,king:false};g=play(g,42,28);assert.equal(g.board[28].hp,2);
+g=empty([[],['rebirth']]);g.board[35]={side:2,king:false};g=play(g,42,28);assert(g.revived[1]);assert(g.board[1]?.side===2);
+g=initial();g=upgrade(g,1,'armor');assert.equal(g.board.filter(p=>p?.side===1&&p.hp===2).length,3);assert.throws(()=>upgrade(g,1,'armor'));assert.equal(forgeCharges(g,1),1);g=forgeResult(g,1,true);assert.equal(g.rewards[0].length,3);assert.equal(forgeCharges(g,1),0);const reward=g.rewards[0][0];g=claimReward(g,1,reward);assert(g.relics[0].includes(reward));assert.equal(g.rewards[0].length,0);assert.throws(()=>forgeResult(g,1,true));g.turns[0]=3;assert.equal(forgeCharges(g,1),1);g=forgeResult(g,1,false);assert.equal(forgeCharges(g,1),0);
+for(let t=0;t<30;t++){g=initial([e.relics.slice(t%7,t%7+4).map(r=>r.id),e.relics.slice((t+3)%8,(t+3)%8+4).map(r=>r.id)]);for(let k=0;k<200&&!g.winner;k++){const ms=moves(g);assert(ms.length);const m=ms[Math.floor(Math.random()*ms.length)];g=play(g,m.from,m.to);assert(g.board.filter(Boolean).length<=24);for(const p of g.board)if(p)assert((p.hp||1)<=2);}}
+console.log('13 pouvoirs : armures, sauts, orthogonales, vol, explosion, vampirisme, résurrection, atelier, récompenses et 30 duels combinés vérifiés.');
